@@ -173,7 +173,7 @@
       <div class="pipe-step">
         <span class="pipe-icon">📊</span>
         <div class="pipe-name">Indicateurs</div>
-        <div class="pipe-desc">RSI · MACD · EMA · Bollinger</div>
+        <div class="pipe-desc">RSI · MACD · EMA · Bollinger · ATR · VWAP · Ichimoku · Pivots</div>
       </div>
       <div class="pipe-arrow">→</div>
       <div class="pipe-step">
@@ -207,7 +207,7 @@ BTC   →  BTC-USD   (Bitcoin / Dollar US)
 ICP   →  ICP-USD   (Internet Computer Protocol)
 XRP   →  XRP-USD   (Ripple XRP)
 BNB   →  BNB-USD   (BNB Chain / Binance Coin)</div>
-      <p style="margin-top:8px;">Les données sont rafraîchies <strong style="color:var(--text)">toutes les 60 secondes</strong> automatiquement.</p>
+      <p style="margin-top:8px;">Les données sont rafraîchies via <strong style="color:var(--text)">WebSocket toutes les 30 secondes</strong> (badge <span style="color:#22c55e">● LIVE</span>) avec fallback polling 60s si la connexion WebSocket échoue. Un cache serveur de 55s évite de surcharger Yahoo Finance sur le dashboard multi-actifs.</p>
     </div>
   </div>
 
@@ -216,7 +216,7 @@ BNB   →  BNB-USD   (BNB Chain / Binance Coin)</div>
     <div class="section-header">
       <div class="section-icon" style="background:rgba(168,85,247,.1)">📈</div>
       <div>
-        <div class="section-title">Les 4 Indicateurs Techniques</div>
+        <div class="section-title">Les 8 Indicateurs Techniques</div>
         <div class="section-sub">Implémentés en pur pandas/numpy — aucune bibliothèque externe</div>
       </div>
     </div>
@@ -281,6 +281,72 @@ Bande Basse  = Médiane − (2 × Écart-type)</div>
         <li>Bandes larges = forte volatilité en cours</li>
       </ul>
     </div>
+
+    <!-- ATR -->
+    <div class="card">
+      <h3 style="color:#22d3ee">5. ATR — Average True Range (14 périodes)</h3>
+      <p>L'ATR mesure la <strong style="color:var(--text)">volatilité absolue</strong> du marché, indépendamment de la direction. C'est la base du calculateur de risque.</p>
+      <div class="formula">True Range  = max(High−Low, |High−Close_prev|, |Low−Close_prev|)
+ATR(14)     = EWM(True Range, com=13)</div>
+      <ul>
+        <li>ATR élevé → marché volatile → stop loss plus large nécessaire</li>
+        <li>ATR faible → marché calme → stop loss plus serré possible</li>
+        <li><strong>Stop Loss suggéré</strong> = Prix actuel ± (2 × ATR)</li>
+        <li><strong>Take Profit suggéré</strong> = Prix actuel ± (3 × ATR) → ratio risque/rendement 1:1.5</li>
+      </ul>
+    </div>
+
+    <!-- VWAP -->
+    <div class="card">
+      <h3 style="color:#f472b6">6. VWAP — Volume Weighted Average Price</h3>
+      <p>Le VWAP est le <strong style="color:var(--text)">prix moyen pondéré par le volume</strong> de la session. Référence clé des traders institutionnels.</p>
+      <div class="formula">Prix Typique = (High + Low + Close) / 3
+VWAP        = Σ(Prix Typique × Volume) / Σ(Volume)</div>
+      <ul>
+        <li><span class="badge-buy">Prix &gt; VWAP</span> → les acheteurs dominent la session, contexte haussier</li>
+        <li><span class="badge-sell">Prix &lt; VWAP</span> → les vendeurs dominent la session, contexte baissier</li>
+        <li>Utilisé comme benchmark par les banques et fonds d'investissement</li>
+        <li>Visible sur le graphique via le bouton <strong>VWAP</strong> (ligne rose)</li>
+      </ul>
+    </div>
+
+    <!-- ICHIMOKU -->
+    <div class="card">
+      <h3 style="color:#a78bfa">7. Ichimoku Cloud (9, 26, 52)</h3>
+      <p>Indicateur japonais tout-en-un : <strong style="color:var(--text)">tendance, momentum, support et résistance</strong> en un seul graphique.</p>
+      <div class="formula">Tenkan-sen  = (Max(9) + Min(9)) / 2         ← tendance court terme
+Kijun-sen   = (Max(26) + Min(26)) / 2        ← tendance moyen terme
+Senkou A    = (Tenkan + Kijun) / 2  [décalé +26]
+Senkou B    = (Max(52) + Min(52)) / 2  [décalé +26]
+Chikou     = Close [décalé −26]</div>
+      <ul>
+        <li><span class="badge-buy">Prix au-dessus du nuage (SpanA &amp; B)</span> → tendance haussière forte</li>
+        <li><span class="badge-sell">Prix en-dessous du nuage</span> → tendance baissière forte</li>
+        <li>Prix dans le nuage → zone d'indécision, éviter d'entrer</li>
+        <li><span class="badge-buy">Tenkan &gt; Kijun</span> → impulsion haussière (+0.5 score)</li>
+        <li>Visible via le bouton <strong>Ichimoku</strong> (4 lignes colorées)</li>
+      </ul>
+    </div>
+
+    <!-- PIVOTS -->
+    <div class="card">
+      <h3 style="color:#fb923c">8. Niveaux Pivot (Support &amp; Résistance)</h3>
+      <p>Niveaux de prix <strong style="color:var(--text)">mathématiquement calculés</strong> à partir de la bougie précédente. Utilisés par des millions de traders, ils deviennent auto-réalisateurs.</p>
+      <div class="formula">Pivot  = (High_prev + Low_prev + Close_prev) / 3
+R1     = 2 × Pivot − Low_prev
+R2     = Pivot + (High_prev − Low_prev)
+R3     = High_prev + 2 × (Pivot − Low_prev)
+S1     = 2 × Pivot − High_prev
+S2     = Pivot − (High_prev − Low_prev)
+S3     = Low_prev − 2 × (High_prev − Pivot)</div>
+      <ul>
+        <li><strong>R1/R2/R3</strong> → zones de résistance potentielle (prix plafonds)</li>
+        <li><strong>S1/S2/S3</strong> → zones de support potentiel (prix planchers)</li>
+        <li>Cassure de R2 avec volume → continuation haussière forte</li>
+        <li>Rebond sur S1 → opportunité d'achat en tendance haussière</li>
+        <li>Visible via le bouton <strong>Pivots</strong> (lignes horizontales en pointillés)</li>
+      </ul>
+    </div>
   </div>
 
   <!-- MOTEUR DE SIGNAL -->
@@ -307,8 +373,13 @@ Bande Basse  = Médiane − (2 × Écart-type)</div>
           <tr><td>EMA9 &lt; EMA21 &lt; EMA50</td><td><span class="badge-sell">−1.5</span></td><td>Tendance baissière alignée</td></tr>
           <tr><td>Prix touche bande Bollinger basse</td><td><span class="badge-buy">+1.5</span></td><td>Support dynamique</td></tr>
           <tr><td>Prix touche bande Bollinger haute</td><td><span class="badge-sell">−1.5</span></td><td>Résistance dynamique</td></tr>
+          <tr><td>Tenkan &gt; Kijun (Ichimoku)</td><td><span class="badge-buy">+0.5</span></td><td>Impulsion haussière court terme</td></tr>
+          <tr><td>Prix au-dessus du nuage Ichimoku</td><td><span class="badge-buy">+0.8</span></td><td>Tendance haussière confirmée</td></tr>
+          <tr><td>Tenkan &lt; Kijun (Ichimoku)</td><td><span class="badge-sell">−0.5</span></td><td>Impulsion baissière court terme</td></tr>
+          <tr><td>Prix en-dessous du nuage Ichimoku</td><td><span class="badge-sell">−0.8</span></td><td>Tendance baissière confirmée</td></tr>
         </tbody>
       </table>
+      <p style="margin-top:10px;color:var(--muted);font-size:.82rem">Score maximum théorique : ±8.6 (tous indicateurs alignés dans la même direction, y compris Ichimoku)</p>
     </div>
 
     <div class="card">
@@ -354,24 +425,51 @@ Confiance = 50% + (|score| × 8%)   [plafonné à 100%]</div>
     </div>
   </div>
 
+  <!-- OUTILS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(34,197,94,.1)">🛠</div>
+      <div>
+        <div class="section-title">Outils intégrés</div>
+        <div class="section-sub">Fonctionnalités avancées pour le trader</div>
+      </div>
+    </div>
+    <div class="card">
+      <table class="score-table">
+        <thead><tr><th>Outil</th><th>Où</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>⊞ <strong>Dashboard</strong></td><td><a href="/dashboard" style="color:var(--accent)">/dashboard</a></td><td>Vue globale des 7 actifs : signal, RSI, score, SL/TP en un coup d'œil. Refresh auto 90s.</td></tr>
+          <tr><td>📋 <strong>Historique</strong></td><td><a href="/history" style="color:var(--accent)">/history</a></td><td>Tableau de tous les signaux émis depuis le démarrage du serveur (max 200/actif). Filtrable par actif.</td></tr>
+          <tr><td>💰 <strong>Risk Calculator</strong></td><td>Panneau droite</td><td>Calcule Stop Loss et Take Profit basés sur l'ATR. Entrez votre capital et % de risque → position size automatique.</td></tr>
+          <tr><td>🔔 <strong>Alertes</strong></td><td>Bouton header</td><td>Notifications navigateur quand un signal BUY ou SELL est émis. Nécessite autorisation browser.</td></tr>
+          <tr><td>📡 <strong>WebSocket</strong></td><td>Automatique</td><td>Mise à jour en temps réel toutes les 30s via WebSocket. Badge <span style="color:#22c55e">● LIVE</span> = connexion active. Fallback polling 60s si déconnecté.</td></tr>
+          <tr><td>🔬 <strong>Backtesting</strong></td><td>API</td><td><code style="color:var(--accent)">/api/backtest?asset=BTC&interval=1h&period=60d</code> — taux de réussite historique des signaux.</td></tr>
+          <tr><td>📱 <strong>PWA</strong></td><td>Navigateur</td><td>Installable sur mobile comme une vraie app. Cliquez "Ajouter à l'écran d'accueil" dans votre navigateur mobile.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ACTIFS SUPPORTÉS -->
   <div class="section">
     <div class="section-header">
       <div class="section-icon" style="background:rgba(255,166,87,.1)">💎</div>
       <div>
         <div class="section-title">Actifs Supportés</div>
-        <div class="section-sub">5 marchés couverts simultanément</div>
+        <div class="section-sub">7 marchés couverts simultanément</div>
       </div>
     </div>
     <div class="card">
       <table class="score-table">
         <thead><tr><th>Actif</th><th>Ticker Yahoo</th><th>Description</th><th>Page</th></tr></thead>
         <tbody>
-          <tr><td>⚡ <strong>XAU/USD</strong></td><td><span class="badge-info">GC=F</span></td><td>Or spot (Gold Futures)</td><td><a href="/" style="color:var(--accent)">Gold</a></td></tr>
-          <tr><td>₿ <strong>BTC/USD</strong></td><td><span class="badge-info">BTC-USD</span></td><td>Bitcoin</td><td><a href="/btc" style="color:var(--accent)">Bitcoin</a></td></tr>
-          <tr><td>∞ <strong>ICP/USD</strong></td><td><span class="badge-info">ICP-USD</span></td><td>Internet Computer</td><td><a href="/icp" style="color:var(--accent)">ICP</a></td></tr>
+          <tr><td>⚡ <strong>XAU/USD</strong></td><td><span class="badge-info">GC=F</span></td><td>Or spot (Gold Futures CMX)</td><td><a href="/" style="color:var(--accent)">Gold</a></td></tr>
+          <tr><td>₿ <strong>BTC/USD</strong></td><td><span class="badge-info">BTC-USD</span></td><td>Bitcoin</td><td><a href="/btc" style="color:var(--accent)">BTC</a></td></tr>
+          <tr><td>Ξ <strong>ETH/USD</strong></td><td><span class="badge-info">ETH-USD</span></td><td>Ethereum</td><td><a href="/eth" style="color:var(--accent)">ETH</a></td></tr>
+          <tr><td>∞ <strong>ICP/USD</strong></td><td><span class="badge-info">ICP-USD</span></td><td>Internet Computer Protocol</td><td><a href="/icp" style="color:var(--accent)">ICP</a></td></tr>
           <tr><td>✕ <strong>XRP/USD</strong></td><td><span class="badge-info">XRP-USD</span></td><td>Ripple XRP</td><td><a href="/xrp" style="color:var(--accent)">XRP</a></td></tr>
-          <tr><td>B <strong>BNB/USD</strong></td><td><span class="badge-info">BNB-USD</span></td><td>BNB Chain</td><td><a href="/bnb" style="color:var(--accent)">BNB</a></td></tr>
+          <tr><td>B <strong>BNB/USD</strong></td><td><span class="badge-info">BNB-USD</span></td><td>BNB Chain / Binance Coin</td><td><a href="/bnb" style="color:var(--accent)">BNB</a></td></tr>
+          <tr><td>◎ <strong>SOL/USD</strong></td><td><span class="badge-info">SOL-USD</span></td><td>Solana</td><td><a href="/sol" style="color:var(--accent)">SOL</a></td></tr>
         </tbody>
       </table>
     </div>
@@ -390,7 +488,7 @@ Confiance = 50% + (|score| × 8%)   [plafonné à 100%]</div>
       <ul>
         <li><strong style="color:var(--text)">Analyse technique uniquement</strong> — Aucune analyse fondamentale (news, bilans, événements macro) n'est prise en compte.</li>
         <li><strong style="color:var(--text)">Données légèrement différées</strong> — Yahoo Finance peut introduire un délai de 15 min sur certains marchés.</li>
-        <li><strong style="color:var(--text)">Pas de backtesting</strong> — Les signaux ne sont pas testés historiquement. Les performances passées ne garantissent pas les résultats futurs.</li>
+        <li><strong style="color:var(--text)">Backtesting simplifié disponible</strong> — L'endpoint <code style="color:var(--accent)">/api/backtest?asset=BTC&amp;interval=1h&amp;period=60d</code> applique le moteur sur les données historiques et calcule le taux de réussite. Résultat indicatif seulement — les performances passées ne garantissent pas les résultats futurs.</li>
         <li><strong style="color:var(--text)">Marchés fermés</strong> — En dehors des heures de trading (or, futures), les données peuvent être obsolètes.</li>
         <li><strong style="color:var(--text)">Signal ≠ Certitude</strong> — Un score de 100% de confiance signifie seulement que tous les indicateurs convergent, pas que le marché suivra.</li>
       </ul>
