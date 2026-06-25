@@ -11,7 +11,7 @@ from .signal_engine import generate_signal
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
-app = FastAPI(title="TraidMe — Multi-Asset Trading Assistant")
+app = FastAPI(title="TraidMe by KORVATO — Multi-Asset Trading Assistant")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,21 +21,30 @@ app.add_middleware(
 )
 
 
+# ── Frontend routes ────────────────────────────────────────────────────────
+
 @app.get("/", include_in_schema=False)
 async def serve_gold():
     return FileResponse(FRONTEND_DIR / "index.html")
 
-
 @app.get("/btc", include_in_schema=False)
-async def serve_btc():
-    return FileResponse(FRONTEND_DIR / "btc.html")
+@app.get("/icp", include_in_schema=False)
+@app.get("/xrp", include_in_schema=False)
+@app.get("/bnb", include_in_schema=False)
+async def serve_crypto():
+    return FileResponse(FRONTEND_DIR / "crypto.html")
 
+@app.get("/algo", include_in_schema=False)
+async def serve_algo():
+    return FileResponse(FRONTEND_DIR / "algo.html")
+
+
+# ── API helpers ────────────────────────────────────────────────────────────
 
 def _build_analysis(asset: str, interval: str, period: str) -> dict:
     df_raw = fetch_ohlcv(interval=interval, period=period, asset=asset)
     df     = compute_indicators(df_raw)
     vals   = extract_last_values(df)
-    series = indicators_to_series(df)
     result = generate_signal(vals)
     return {
         "timestamp":   datetime.now(timezone.utc).isoformat(),
@@ -44,7 +53,7 @@ def _build_analysis(asset: str, interval: str, period: str) -> dict:
         "label":       ASSETS[asset]["label"],
         "interval":    interval,
         "candles":     df_to_records(df_raw),
-        "indicators":  series,
+        "indicators":  indicators_to_series(df),
         "values":      vals,
         "signal":      result.signal,
         "score":       result.score,
@@ -96,41 +105,47 @@ def _build_forecast(asset: str) -> dict:
     }
 
 
+# ── API endpoints ──────────────────────────────────────────────────────────
+
 @app.get("/api/analysis")
 async def get_analysis(
-    asset:    str = Query("GOLD", description="GOLD ou BTC"),
-    interval: str = Query("5m",   description="Intervalle (1m, 5m, 15m, 30m, 1h)"),
-    period:   str = Query("5d",   description="Période (1d, 5d, 60d)"),
+    asset:    str = Query("GOLD"),
+    interval: str = Query("5m"),
+    period:   str = Query("5d"),
 ):
     if asset not in ASSETS:
-        raise HTTPException(status_code=400, detail=f"Asset inconnu : {asset}. Valeurs : {list(ASSETS)}")
+        raise HTTPException(400, f"Asset inconnu : {asset}. Valeurs : {list(ASSETS)}")
     try:
         return JSONResponse(_build_analysis(asset, interval, period))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(500, str(exc))
 
 
 @app.get("/api/forecast")
-async def get_forecast(asset: str = Query("GOLD", description="GOLD ou BTC")):
+async def get_forecast(asset: str = Query("GOLD")):
     if asset not in ASSETS:
-        raise HTTPException(status_code=400, detail=f"Asset inconnu : {asset}")
+        raise HTTPException(400, f"Asset inconnu : {asset}")
     try:
         return JSONResponse(_build_forecast(asset))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(500, str(exc))
 
 
 @app.get("/api/price")
 async def get_price(asset: str = Query("GOLD")):
     if asset not in ASSETS:
-        raise HTTPException(status_code=400, detail=f"Asset inconnu : {asset}")
+        raise HTTPException(400, f"Asset inconnu : {asset}")
     try:
-        price = get_current_price(asset)
         return JSONResponse({
             "asset":     asset,
             "ticker":    ASSETS[asset]["ticker"],
-            "price":     price,
+            "price":     get_current_price(asset),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(500, str(exc))
+
+
+@app.get("/api/assets")
+async def get_assets():
+    return JSONResponse({"assets": list(ASSETS.keys()), "details": ASSETS})

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TraidMe by KORVATO</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    --bg:      #0a0e17;
+    --surface: #111827;
+    --border:  #1f2937;
+    --text:    #f1f5f9;
+    --muted:   #64748b;
+    --buy:     #22c55e;
+    --sell:    #ef4444;
+    --neutral: #f59e0b;
+    --accent:  #f7931a;
+    --radius:  10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* NAV */
+  .asset-nav {
+    display: flex; align-items: center; background: var(--surface);
+    border-bottom: 1px solid var(--border); padding: 0 16px;
+    overflow-x: auto; gap: 0; white-space: nowrap;
+  }
+  .asset-nav::-webkit-scrollbar { height: 3px; }
+  .asset-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .asset-nav a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 14px; text-decoration: none; font-size: .8rem; font-weight: 600;
+    color: var(--muted); border-bottom: 3px solid transparent; transition: all .2s; flex-shrink: 0;
+  }
+  .asset-nav a:hover { color: var(--text); }
+  .asset-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .asset-nav a.algo-link { margin-left: auto; color: var(--muted); font-size: .75rem; }
+  .asset-nav a.algo-link:hover { color: var(--text); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100; gap: 12px; flex-wrap: wrap;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 36px; height: 36px; background: var(--accent);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 900; color: #fff; flex-shrink: 0;
+  }
+  .logo-text { font-size: 1.2rem; font-weight: 700; }
+  .logo-text span { color: var(--accent); }
+  .logo-sub { font-size: .6rem; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  .header-center { text-align: center; }
+  .ticker-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; }
+  #live-price { font-size: 1.7rem; font-weight: 800; color: var(--buy); font-variant-numeric: tabular-nums; }
+  #live-price.down { color: var(--sell); }
+  #price-change { font-size: .78rem; font-weight: 600; margin-top: 1px; }
+  #price-change.up { color: var(--buy); } #price-change.down { color: var(--sell); }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  #last-update { font-size: .7rem; color: var(--muted); }
+  #refresh-btn {
+    background: var(--accent); border: none; color: #fff;
+    padding: 7px 16px; border-radius: 7px; cursor: pointer;
+    font-size: .82rem; font-weight: 600; transition: opacity .2s;
+  }
+  #refresh-btn:hover { opacity: .85; }
+  #refresh-btn.loading { opacity: .5; pointer-events: none; }
+  .spinner { display: inline-block; width: 9px; height: 9px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin .6s linear infinite; margin-right: 5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #countdown { font-size: .7rem; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+  /* LAYOUT */
+  .container { max-width: 1600px; margin: 0 auto; padding: 18px 24px; }
+  .grid-main { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .card-title { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 12px; }
+
+  /* SIGNAL */
+  .signal-card { display: flex; flex-direction: column; gap: 12px; }
+  .signal-badge {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; padding: 20px 16px;
+    font-size: 2.4rem; font-weight: 900; letter-spacing: 2px; transition: all .4s;
+  }
+  .signal-badge.BUY     { background: rgba(34,197,94,.1);   color: var(--buy);     border: 2px solid var(--buy); }
+  .signal-badge.SELL    { background: rgba(239,68,68,.1);    color: var(--sell);    border: 2px solid var(--sell); }
+  .signal-badge.NEUTRAL { background: rgba(245,158,11,.08);  color: var(--neutral); border: 2px solid var(--neutral); }
+  .signal-badge.ERROR   { background: rgba(100,116,139,.08); color: var(--muted);   border: 2px solid var(--border); }
+  .score-label { font-size: .73rem; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .score-bar-bg { height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 5px; transition: width .5s; }
+  .score-bar-fill.BUY     { background: linear-gradient(90deg,#16a34a,#22c55e); }
+  .score-bar-fill.SELL    { background: linear-gradient(90deg,#b91c1c,#ef4444); }
+  .score-bar-fill.NEUTRAL { background: linear-gradient(90deg,#b45309,#f59e0b); }
+  .confidence-text { text-align: center; font-size: .76rem; color: var(--muted); margin-top: 4px; }
+  .indicators-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .ind-box { background: var(--bg); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border); }
+  .ind-label { font-size: .6rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .ind-value { font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .ind-value.rsi-low  { color: var(--buy); }
+  .ind-value.rsi-high { color: var(--sell); }
+  .ind-value.ema   { color: #3b82f6; }
+  .ind-value.bb    { color: #a855f7; }
+  .ind-value.close { color: var(--accent); }
+
+  /* FORECASTS */
+  .forecast-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 16px; }
+  .forecast-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; transition: border-color .3s; }
+  .forecast-card:hover { border-color: var(--accent); }
+  .forecast-horizon { font-size: .66rem; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px; }
+  .forecast-signal { font-size: 1.3rem; font-weight: 800; margin-bottom: 5px; letter-spacing: 1px; }
+  .forecast-signal.BUY  { color: var(--buy); } .forecast-signal.SELL { color: var(--sell); }
+  .forecast-signal.NEUTRAL { color: var(--neutral); } .forecast-signal.ERROR { color: var(--muted); }
+  .forecast-score { font-size: .73rem; color: var(--muted); }
+  .forecast-conf  { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+  .forecast-reasons { margin-top: 8px; font-size: .65rem; color: var(--muted); text-align: left; line-height: 1.5; }
+  .forecast-reasons li { list-style: none; }
+  .forecast-reasons li::before { content: "▸ "; color: var(--accent); }
+
+  /* EXPLICATION */
+  #explanation-text {
+    font-size: .8rem; line-height: 1.75; color: var(--muted);
+    white-space: pre-wrap; font-family: 'Cascadia Code','Fira Code',monospace;
+    background: var(--bg); padding: 13px; border-radius: 8px;
+    border-left: 3px solid var(--accent); max-height: 250px; overflow-y: auto;
+  }
+
+  /* CHARTS */
+  #chart-main { width: 100%; height: 360px; }
+  #chart-rsi  { width: 100%; height: 110px; margin-top: 8px; }
+  #chart-macd { width: 100%; height: 110px; margin-top: 8px; }
+  .chart-label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; padding-left: 4px; }
+
+  /* INTERVAL */
+  .interval-bar { display: flex; gap: 7px; margin-bottom: 12px; flex-wrap: wrap; }
+  .interval-btn { padding: 4px 12px; border-radius: 5px; font-size: .76rem; background: var(--bg); border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all .15s; }
+  .interval-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .interval-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+  /* LOADING */
+  #loading-overlay {
+    position: fixed; inset: 0; background: rgba(10,14,23,.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 999; gap: 16px; transition: opacity .3s;
+  }
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .big-icon { font-size: 3.5rem; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+  .big-spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  #loading-msg { color: var(--muted); font-size: .87rem; }
+
+  /* ERROR */
+  #error-banner { display: none; background: rgba(239,68,68,.1); border: 1px solid var(--sell); color: var(--sell); padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: .83rem; }
+
+  @media (max-width: 960px) { .grid-main { grid-template-columns: 1fr; } .forecast-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="asset-nav" id="asset-nav">
+  <a href="/"><span class="dot" style="background:#ffa657"></span> Gold</a>
+  <a href="/btc" data-asset="BTC"><span class="dot" style="background:#f7931a"></span> Bitcoin</a>
+  <a href="/icp" data-asset="ICP"><span class="dot" style="background:#8b5cf6"></span> ICP</a>
+  <a href="/xrp" data-asset="XRP"><span class="dot" style="background:#00AAE4"></span> XRP</a>
+  <a href="/bnb" data-asset="BNB"><span class="dot" style="background:#F0B90B"></span> BNB</a>
+  <a href="/algo" class="algo-link">&#9432; Algorithme</a>
+</nav>
+
+<!-- Loading -->
+<div id="loading-overlay">
+  <div class="big-icon" id="loading-icon">?</div>
+  <div class="big-spinner"></div>
+  <div id="loading-msg">Chargement des données…</div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon" id="logo-icon">?</div>
+    <div>
+      <div class="logo-text">Traid<span>Me</span></div>
+      <div class="logo-sub" id="logo-sub">by KORVATO</div>
+    </div>
+  </div>
+  <div class="header-center">
+    <div class="ticker-label" id="ticker-label">— / USD</div>
+    <div id="live-price">— —</div>
+    <div id="price-change" class="up">—</div>
+  </div>
+  <div class="header-right">
+    <div id="countdown">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <circle cx="7" cy="7" r="5.5" stroke="#1f2937" stroke-width="2" fill="none"/>
+        <circle id="countdown-arc" cx="7" cy="7" r="5.5" stroke="var(--accent)" stroke-width="2" fill="none"
+          stroke-dasharray="34.6" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 7 7)"/>
+      </svg>
+      <span id="countdown-text">60s</span>
+    </div>
+    <div id="last-update">—</div>
+    <button id="refresh-btn" onclick="loadAll()">Actualiser</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="error-banner"></div>
+
+  <div class="interval-bar" id="interval-bar">
+    <button class="interval-btn active" data-interval="5m"  data-period="5d">5 min</button>
+    <button class="interval-btn" data-interval="15m" data-period="5d">15 min</button>
+    <button class="interval-btn" data-interval="30m" data-period="60d">30 min</button>
+    <button class="interval-btn" data-interval="1h"  data-period="60d">1 heure</button>
+  </div>
+
+  <div class="grid-main">
+    <div>
+      <div class="card" style="padding:12px;">
+        <div class="chart-label" id="chart-label-main">— Chandeliers + EMA + Bollinger</div>
+        <div id="chart-main"></div>
+        <div class="chart-label" style="margin-top:12px;">RSI (14)</div>
+        <div id="chart-rsi"></div>
+        <div class="chart-label" style="margin-top:8px;">MACD (12, 26, 9)</div>
+        <div id="chart-macd"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card signal-card">
+        <div class="card-title" id="signal-title">Signal Principal</div>
+        <div id="signal-badge" class="signal-badge NEUTRAL">— —</div>
+        <div>
+          <div class="score-label"><span>Conviction</span><span id="score-val">0.0</span></div>
+          <div class="score-bar-bg"><div id="score-bar" class="score-bar-fill NEUTRAL" style="width:50%"></div></div>
+          <div class="confidence-text" id="confidence-text">Confiance : —</div>
+        </div>
+        <div class="indicators-grid">
+          <div class="ind-box"><div class="ind-label">RSI 14</div><div class="ind-value" id="v-rsi">—</div></div>
+          <div class="ind-box"><div class="ind-label">MACD</div><div class="ind-value" id="v-macd">—</div></div>
+          <div class="ind-box"><div class="ind-label">EMA 9</div><div class="ind-value ema" id="v-ema9">—</div></div>
+          <div class="ind-box"><div class="ind-label">EMA 21</div><div class="ind-value ema" id="v-ema21">—</div></div>
+          <div class="ind-box"><div class="ind-label">EMA 50</div><div class="ind-value ema" id="v-ema50">—</div></div>
+          <div class="ind-box"><div class="ind-label">BB Haut</div><div class="ind-value bb" id="v-bbu">—</div></div>
+          <div class="ind-box"><div class="ind-label">BB Bas</div><div class="ind-value bb" id="v-bbl">—</div></div>
+          <div class="ind-box"><div class="ind-label">Prix USD</div><div class="ind-value close" id="v-close">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Analyse Détaillée</div>
+        <div id="explanation-text">En attente…</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <div class="card-title" style="padding-left:4px;margin-bottom:10px;" id="forecast-title">Prévisions Multi-Horizons</div>
+    <div class="forecast-grid" id="forecast-grid">
+      <div class="forecast-card"><div class="forecast-horizon">30 min</div><div class="forecast-signal">—</div></div>
+      <div class="forecast-card"><div class="forecast-horizon">1 heure</div><div class="forecast-signal">—</div></div>
+      <div class="forecast-card"><div class="forecast-horizon">2 heures</div><div class="forecast-signal">—</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Asset config ───────────────────────────────────────────────────────────
+const ASSET_CONFIG = {
+  BTC: { name:'Bitcoin',           symbol:'BTC/USD', icon:'₿',  accent:'#f7931a', accentRgb:'247,147,26',  gridColor:'#1a1e2e' },
+  ICP: { name:'Internet Computer', symbol:'ICP/USD', icon:'∞',  accent:'#8b5cf6', accentRgb:'139,92,246',  gridColor:'#161626' },
+  XRP: { name:'Ripple XRP',        symbol:'XRP/USD', icon:'✕',  accent:'#00AAE4', accentRgb:'0,170,228',   gridColor:'#131b26' },
+  BNB: { name:'BNB Chain',         symbol:'BNB/USD', icon:'B',  accent:'#F0B90B', accentRgb:'240,185,11',  gridColor:'#1a1a0e' },
+};
+
+const PATH_ASSET = { '/btc':'BTC', '/icp':'ICP', '/xrp':'XRP', '/bnb':'BNB' };
+const ASSET = PATH_ASSET[window.location.pathname] || 'BTC';
+const CFG   = ASSET_CONFIG[ASSET];
+
+// Apply theme
+document.documentElement.style.setProperty('--accent', CFG.accent);
+document.title = `TraidMe by KORVATO — ${CFG.symbol}`;
+
+// Mark active nav link
+document.querySelectorAll('.asset-nav a[data-asset]').forEach(a => {
+  if (a.dataset.asset === ASSET) a.classList.add('active');
+});
+
+// Init header text
+document.getElementById('logo-icon').textContent     = CFG.icon;
+document.getElementById('loading-icon').textContent  = CFG.icon;
+document.getElementById('ticker-label').textContent  = CFG.symbol;
+document.getElementById('logo-sub').textContent      = `${CFG.name} — by KORVATO`;
+document.getElementById('chart-label-main').textContent = `${CFG.symbol} — Chandeliers + EMA 9/21/50 + Bollinger Bands`;
+document.getElementById('signal-title').textContent  = `Signal Principal — ${CFG.symbol}`;
+document.getElementById('forecast-title').textContent = `Prévisions Multi-Horizons — ${CFG.symbol}`;
+document.getElementById('loading-msg').textContent   = `Chargement des données ${CFG.symbol}…`;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let chartMain, candleSeries, ema9S, ema21S, ema50S, bbUS, bbLS, bbMS;
+let chartRsi, rsiS, rsiOb, rsiOs;
+let chartMacd, macdS, macdSigS, macdHistS;
+let currentInterval = '5m', currentPeriod = '5d';
+let countdownTimer = null, countdownSec = 60;
+let prevPrice = null;
+
+// ── Init Charts ────────────────────────────────────────────────────────────
+function initCharts() {
+  const opts = {
+    layout: { background:{ color:'#111827' }, textColor:'#64748b' },
+    grid:   { vertLines:{ color: CFG.gridColor }, horzLines:{ color: CFG.gridColor } },
+    crosshair: { mode:1 },
+    rightPriceScale: { borderColor:'#1f2937' },
+    timeScale: { borderColor:'#1f2937', timeVisible:true, secondsVisible:false },
+  };
+
+  chartMain = LightweightCharts.createChart(document.getElementById('chart-main'), {...opts, height:360});
+  candleSeries = chartMain.addCandlestickSeries({ upColor:'#22c55e', downColor:'#ef4444', borderUpColor:'#22c55e', borderDownColor:'#ef4444', wickUpColor:'#22c55e', wickDownColor:'#ef4444' });
+  ema9S  = chartMain.addLineSeries({ color:'#3b82f6', lineWidth:1, title:'EMA9' });
+  ema21S = chartMain.addLineSeries({ color: CFG.accent, lineWidth:1, title:'EMA21' });
+  ema50S = chartMain.addLineSeries({ color:'#a855f7', lineWidth:2, title:'EMA50' });
+  bbUS   = chartMain.addLineSeries({ color:`rgba(${CFG.accentRgb},.35)`, lineWidth:1, lineStyle:2, title:'BB↑' });
+  bbLS   = chartMain.addLineSeries({ color:`rgba(${CFG.accentRgb},.35)`, lineWidth:1, lineStyle:2, title:'BB↓' });
+  bbMS   = chartMain.addLineSeries({ color:`rgba(${CFG.accentRgb},.15)`, lineWidth:1, lineStyle:3, title:'BBmid' });
+
+  chartRsi = LightweightCharts.createChart(document.getElementById('chart-rsi'), {...opts, height:110});
+  rsiS  = chartRsi.addLineSeries({ color:'#f59e0b', lineWidth:2, title:'RSI' });
+  rsiOb = chartRsi.addLineSeries({ color:'rgba(239,68,68,.5)', lineWidth:1, lineStyle:2 });
+  rsiOs = chartRsi.addLineSeries({ color:'rgba(34,197,94,.5)', lineWidth:1, lineStyle:2 });
+
+  chartMacd    = LightweightCharts.createChart(document.getElementById('chart-macd'), {...opts, height:110});
+  macdS        = chartMacd.addLineSeries({ color:'#3b82f6', lineWidth:2, title:'MACD' });
+  macdSigS     = chartMacd.addLineSeries({ color: CFG.accent, lineWidth:1, title:'Signal' });
+  macdHistS    = chartMacd.addHistogramSeries({ color:'#22c55e', title:'Histo', priceFormat:{type:'price',precision:4,minMove:0.0001} });
+
+  [chartRsi, chartMacd].forEach(c => {
+    chartMain.timeScale().subscribeVisibleLogicalRangeChange(r => c.timeScale().setVisibleLogicalRange(r));
+    c.timeScale().subscribeVisibleLogicalRangeChange(r => chartMain.timeScale().setVisibleLogicalRange(r));
+  });
+}
+
+// ── Update Charts ──────────────────────────────────────────────────────────
+function updateCharts(data) {
+  candleSeries.setData(data.candles);
+  const ind = data.indicators;
+  ema9S.setData(ind.ema9); ema21S.setData(ind.ema21); ema50S.setData(ind.ema50);
+  bbUS.setData(ind.bb_upper); bbLS.setData(ind.bb_lower); bbMS.setData(ind.bb_mid);
+  rsiS.setData(ind.rsi);
+  if (ind.rsi.length > 1) {
+    const t0 = ind.rsi[0].time, t1 = ind.rsi[ind.rsi.length-1].time;
+    rsiOb.setData([{time:t0,value:70},{time:t1,value:70}]);
+    rsiOs.setData([{time:t0,value:30},{time:t1,value:30}]);
+  }
+  macdS.setData(ind.macd); macdSigS.setData(ind.macd_signal);
+  macdHistS.setData(ind.macd_hist.map(p => ({...p, color: p.value>=0?'rgba(34,197,94,.75)':'rgba(239,68,68,.75)'})));
+  chartMain.timeScale().fitContent();
+}
+
+// ── Update Signal ──────────────────────────────────────────────────────────
+function updateSignal(data) {
+  const {signal:sig, score, confidence:conf, values:v, explanation} = data;
+  const badge = document.getElementById('signal-badge');
+  badge.className = `signal-badge ${sig}`;
+  badge.textContent = {BUY:'▲ ACHAT', SELL:'▼ VENTE', NEUTRAL:'◆ NEUTRE', ERROR:'⚠ ERREUR'}[sig] || sig;
+
+  document.getElementById('score-val').textContent = (score>=0?'+':'')+score.toFixed(1);
+  const bar = document.getElementById('score-bar');
+  bar.className = `score-bar-fill ${sig}`;
+  bar.style.width = Math.max(0,Math.min(100,(score+7)/14*100))+'%';
+  document.getElementById('confidence-text').textContent = `Confiance : ${conf}%`;
+
+  const rsiVal = v.rsi;
+  const rsiEl  = document.getElementById('v-rsi');
+  rsiEl.textContent = rsiVal ? rsiVal.toFixed(1) : '—';
+  rsiEl.className   = 'ind-value '+(rsiVal<30?'rsi-low':rsiVal>70?'rsi-high':'');
+
+  const fmt = (n, dec=2) => n != null ? n.toLocaleString('fr-FR',{maximumFractionDigits:dec}) : '—';
+  document.getElementById('v-macd').textContent  = v.macd  != null ? v.macd.toFixed(4) : '—';
+  document.getElementById('v-ema9').textContent  = fmt(v.ema9, 2);
+  document.getElementById('v-ema21').textContent = fmt(v.ema21, 2);
+  document.getElementById('v-ema50').textContent = fmt(v.ema50, 2);
+  document.getElementById('v-bbu').textContent   = fmt(v.bb_upper, 2);
+  document.getElementById('v-bbl').textContent   = fmt(v.bb_lower, 2);
+  document.getElementById('v-close').textContent = fmt(v.close, 2);
+  document.getElementById('explanation-text').textContent = explanation;
+}
+
+// ── Update Price ───────────────────────────────────────────────────────────
+function updatePrice(price) {
+  const el = document.getElementById('live-price');
+  el.textContent = price.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' $';
+  if (prevPrice !== null) {
+    const diff = price - prevPrice, pct = ((diff/prevPrice)*100).toFixed(2);
+    const chEl = document.getElementById('price-change');
+    chEl.textContent = `${diff>=0?'+':''}${diff.toFixed(2)} $ (${diff>=0?'+':''}${pct}%)`;
+    chEl.className   = diff>=0?'up':'down';
+    el.className     = diff>=0?'':'down';
+  }
+  prevPrice = price;
+}
+
+// ── Update Forecasts ───────────────────────────────────────────────────────
+function updateForecasts(forecasts) {
+  const grid = document.getElementById('forecast-grid');
+  grid.innerHTML = '';
+  forecasts.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'forecast-card';
+    const icon = {BUY:'▲',SELL:'▼',NEUTRAL:'◆',ERROR:'⚠'}[f.signal]||'';
+    const reasons = f.reasons.slice(0,3).map(r=>`<li>${r}</li>`).join('');
+    card.innerHTML = `
+      <div class="forecast-horizon">${f.horizon}</div>
+      <div class="forecast-signal ${f.signal}">${icon} ${f.signal}</div>
+      <div class="forecast-score">Score : ${(f.score>=0?'+':'')+f.score.toFixed(1)}</div>
+      <div class="forecast-conf">Confiance : ${f.confidence}%</div>
+      <ul class="forecast-reasons">${reasons}</ul>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(countdownTimer);
+  countdownSec = 60;
+  const arc = document.getElementById('countdown-arc'), text = document.getElementById('countdown-text');
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    text.textContent = countdownSec+'s';
+    arc.setAttribute('stroke-dashoffset', 34.6*(1-countdownSec/60));
+    if (countdownSec<=0) loadAll();
+  }, 1000);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) { const e = await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail||r.statusText); }
+  return r.json();
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = '⚠ Erreur : '+msg; el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 8000);
+}
+
+// ── Load All ───────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.innerHTML = '<span class="spinner"></span>Chargement…';
+  btn.classList.add('loading');
+  try {
+    const [analysis, forecast] = await Promise.all([
+      fetchJSON(`/api/analysis?asset=${ASSET}&interval=${currentInterval}&period=${currentPeriod}`),
+      fetchJSON(`/api/forecast?asset=${ASSET}`),
+    ]);
+    updateCharts(analysis);
+    updateSignal(analysis);
+    updatePrice(analysis.values.close);
+    updateForecasts(forecast.forecasts);
+    document.getElementById('last-update').textContent = 'Mis à jour : '+new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('error-banner').style.display = 'none';
+  } catch(e) { showError(e.message); }
+  finally {
+    btn.innerHTML = 'Actualiser'; btn.classList.remove('loading');
+    document.getElementById('loading-overlay').classList.add('hidden');
+    startCountdown();
+  }
+}
+
+// ── Interval buttons ───────────────────────────────────────────────────────
+document.getElementById('interval-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.interval-btn');
+  if (!btn) return;
+  document.querySelectorAll('.interval-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentInterval = btn.dataset.interval;
+  currentPeriod   = btn.dataset.period;
+  loadAll();
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+initCharts();
+loadAll();
+window.addEventListener('resize', () => {
+  const w = document.getElementById('chart-main').clientWidth;
+  [chartMain,chartRsi,chartMacd].forEach((c,i)=>c.resize(w,[360,110,110][i]));
+});
+</script>
+</body>
+</html>

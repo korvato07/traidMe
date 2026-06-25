@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TraidMe by KORVATO — Algorithme</title>
+<style>
+  :root {
+    --bg:      #0a0e17;
+    --surface: #111827;
+    --border:  #1f2937;
+    --text:    #f1f5f9;
+    --muted:   #64748b;
+    --buy:     #22c55e;
+    --sell:    #ef4444;
+    --neutral: #f59e0b;
+    --accent:  #ffa657;
+    --blue:    #3b82f6;
+    --purple:  #a855f7;
+    --radius:  10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* NAV */
+  .asset-nav {
+    display: flex; align-items: center; background: var(--surface);
+    border-bottom: 1px solid var(--border); padding: 0 16px;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .asset-nav a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 14px; text-decoration: none; font-size: .8rem; font-weight: 600;
+    color: var(--muted); border-bottom: 3px solid transparent; transition: all .2s; flex-shrink: 0;
+  }
+  .asset-nav a:hover { color: var(--text); }
+  .asset-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .asset-nav a.algo-link { margin-left: auto; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+
+  /* LAYOUT */
+  .page { max-width: 900px; margin: 0 auto; padding: 40px 24px 60px; }
+
+  /* HERO */
+  .hero { text-align: center; margin-bottom: 48px; }
+  .hero-badge {
+    display: inline-block; background: rgba(255,166,87,.1);
+    border: 1px solid rgba(255,166,87,.3); color: var(--accent);
+    padding: 5px 16px; border-radius: 20px; font-size: .75rem;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 1rem; line-height: 1.7; max-width: 600px; margin: 0 auto; }
+
+  /* SECTIONS */
+  .section { margin-bottom: 40px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+  }
+  .section-title { font-size: 1.2rem; font-weight: 700; }
+  .section-sub   { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+  .card h3 { font-size: .95rem; font-weight: 700; margin-bottom: 8px; }
+  .card p, .card li { font-size: .87rem; color: var(--muted); line-height: 1.75; }
+  .card ul { padding-left: 20px; margin-top: 6px; }
+  .card li { margin-bottom: 4px; }
+
+  /* FORMULA */
+  .formula {
+    background: var(--bg); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 12px 16px; margin: 10px 0;
+    font-family: 'Cascadia Code','Fira Code',monospace;
+    font-size: .82rem; color: var(--blue); line-height: 1.8;
+    white-space: pre-wrap;
+  }
+
+  /* SCORE TABLE */
+  .score-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .score-table th { background: var(--bg); color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .score-table td { padding: 10px 12px; font-size: .85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .score-table tr:last-child td { border-bottom: none; }
+  .score-table tr:hover td { background: rgba(255,255,255,.02); }
+  .badge-buy     { display:inline-block; background:rgba(34,197,94,.15);   color:var(--buy);     padding:2px 8px; border-radius:4px; font-weight:700; font-size:.78rem; }
+  .badge-sell    { display:inline-block; background:rgba(239,68,68,.15);    color:var(--sell);    padding:2px 8px; border-radius:4px; font-weight:700; font-size:.78rem; }
+  .badge-neutral { display:inline-block; background:rgba(245,158,11,.12);   color:var(--neutral); padding:2px 8px; border-radius:4px; font-weight:700; font-size:.78rem; }
+  .badge-info    { display:inline-block; background:rgba(59,130,246,.15);   color:var(--blue);    padding:2px 8px; border-radius:4px; font-weight:700; font-size:.78rem; }
+
+  /* PIPELINE */
+  .pipeline { display: flex; align-items: center; gap: 0; margin: 20px 0; flex-wrap: wrap; }
+  .pipe-step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; font-size: .8rem;
+    text-align: center; flex: 1; min-width: 100px;
+  }
+  .pipe-step .pipe-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+  .pipe-step .pipe-name { font-weight: 600; color: var(--text); }
+  .pipe-step .pipe-desc { color: var(--muted); font-size: .7rem; margin-top: 2px; }
+  .pipe-arrow { color: var(--accent); font-size: 1.2rem; padding: 0 6px; flex-shrink: 0; }
+
+  /* HORIZON TABLE */
+  .horizon-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 12px; }
+  .horizon-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+  .horizon-card .h-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .horizon-card .h-interval { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .horizon-card .h-period   { font-size: .75rem; color: var(--muted); margin-top: 3px; }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.25);
+    border-radius: var(--radius); padding: 16px 20px; margin-top: 40px;
+    font-size: .82rem; color: var(--muted); line-height: 1.7;
+  }
+  .disclaimer strong { color: var(--neutral); }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 30px; color: var(--muted); font-size: .78rem; border-top: 1px solid var(--border); margin-top: 40px; }
+  footer span { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="asset-nav">
+  <a href="/"><span class="dot" style="background:#ffa657"></span> Gold</a>
+  <a href="/btc"><span class="dot" style="background:#f7931a"></span> Bitcoin</a>
+  <a href="/icp"><span class="dot" style="background:#8b5cf6"></span> ICP</a>
+  <a href="/xrp"><span class="dot" style="background:#00AAE4"></span> XRP</a>
+  <a href="/bnb"><span class="dot" style="background:#F0B90B"></span> BNB</a>
+  <a href="/algo" class="algo-link active">&#9432; Algorithme</a>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">Documentation Technique</div>
+    <h1>Comment fonctionne<br>notre <span>algorithme</span> ?</h1>
+    <p>TraidMe analyse les marchés financiers en temps réel grâce à des indicateurs techniques éprouvés et un moteur de score pondéré pour générer des signaux Buy, Sell ou Neutral.</p>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(255,166,87,.1)">⚙️</div>
+      <div>
+        <div class="section-title">Pipeline de Traitement</div>
+        <div class="section-sub">De la donnée brute au signal de trading</div>
+      </div>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-icon">📡</span>
+        <div class="pipe-name">Données</div>
+        <div class="pipe-desc">Yahoo Finance (yfinance)</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">📊</span>
+        <div class="pipe-name">Indicateurs</div>
+        <div class="pipe-desc">RSI · MACD · EMA · Bollinger</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">🧮</span>
+        <div class="pipe-name">Score</div>
+        <div class="pipe-desc">Système pondéré</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <span class="pipe-icon">🎯</span>
+        <div class="pipe-name">Signal</div>
+        <div class="pipe-desc">BUY · SELL · NEUTRAL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOURCE DE DONNÉES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(59,130,246,.1)">📡</div>
+      <div>
+        <div class="section-title">Source de Données</div>
+        <div class="section-sub">Récupération en temps quasi-réel</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Yahoo Finance via <code style="color:var(--accent)">yfinance</code></h3>
+      <p>Toutes les données OHLCV (Open, High, Low, Close, Volume) proviennent de Yahoo Finance, une source gratuite et fiable pour les marchés financiers mondiaux. Les tickers utilisés :</p>
+      <div class="formula">GOLD  →  GC=F      (Gold Futures CMX — corrélé 1:1 au spot XAU/USD)
+BTC   →  BTC-USD   (Bitcoin / Dollar US)
+ICP   →  ICP-USD   (Internet Computer Protocol)
+XRP   →  XRP-USD   (Ripple XRP)
+BNB   →  BNB-USD   (BNB Chain / Binance Coin)</div>
+      <p style="margin-top:8px;">Les données sont rafraîchies <strong style="color:var(--text)">toutes les 60 secondes</strong> automatiquement.</p>
+    </div>
+  </div>
+
+  <!-- INDICATEURS TECHNIQUES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(168,85,247,.1)">📈</div>
+      <div>
+        <div class="section-title">Les 4 Indicateurs Techniques</div>
+        <div class="section-sub">Implémentés en pur pandas/numpy — aucune bibliothèque externe</div>
+      </div>
+    </div>
+
+    <!-- RSI -->
+    <div class="card">
+      <h3 style="color:var(--neutral)">1. RSI — Relative Strength Index (14 périodes)</h3>
+      <p>Le RSI mesure la <strong style="color:var(--text)">vitesse et l'amplitude des mouvements de prix</strong> pour identifier les zones de surachat et de survente.</p>
+      <div class="formula">Gain moyen  = EWM(gains positifs, com=13)
+Perte moyenne = EWM(pertes positives, com=13)
+RS  = Gain moyen / Perte moyenne
+RSI = 100 − (100 / (1 + RS))</div>
+      <ul>
+        <li><span class="badge-buy">RSI &lt; 30</span> → Zone de <strong>survente</strong> : pression vendeuse excessive, rebond probable</li>
+        <li><span class="badge-sell">RSI &gt; 70</span> → Zone de <strong>surachat</strong> : pression acheteuse excessive, correction probable</li>
+        <li><span class="badge-neutral">30 &lt; RSI &lt; 70</span> → Zone neutre, pas de signal fort</li>
+      </ul>
+    </div>
+
+    <!-- MACD -->
+    <div class="card">
+      <h3 style="color:var(--blue)">2. MACD — Moving Average Convergence Divergence (12, 26, 9)</h3>
+      <p>Le MACD détecte les <strong style="color:var(--text)">changements de momentum</strong> et les croisements de tendance.</p>
+      <div class="formula">EMA rapide   = EMA(close, 12 périodes)
+EMA lente    = EMA(close, 26 périodes)
+Ligne MACD   = EMA rapide − EMA lente
+Ligne Signal = EMA(MACD, 9 périodes)
+Histogramme  = MACD − Signal</div>
+      <ul>
+        <li><span class="badge-buy">MACD &gt; Signal</span> + histogramme positif → <strong>Élan acheteur</strong>, tendance haussière</li>
+        <li><span class="badge-sell">MACD &lt; Signal</span> + histogramme négatif → <strong>Élan vendeur</strong>, tendance baissière</li>
+        <li>Plus l'histogramme est grand, plus l'élan est fort</li>
+      </ul>
+    </div>
+
+    <!-- EMA -->
+    <div class="card">
+      <h3 style="color:#3b82f6">3. EMA — Exponential Moving Averages (9, 21, 50)</h3>
+      <p>Les EMA donnent plus de poids aux prix récents pour détecter la <strong style="color:var(--text)">direction de la tendance</strong>.</p>
+      <div class="formula">EMA(n) = Prix × k + EMA_précédente × (1 − k)
+où k = 2 / (n + 1)</div>
+      <ul>
+        <li><span class="badge-buy">EMA9 &gt; EMA21 &gt; EMA50</span> → <strong>Alignement haussier</strong> : tendance montante confirmée sur les 3 horizons</li>
+        <li><span class="badge-sell">EMA9 &lt; EMA21 &lt; EMA50</span> → <strong>Alignement baissier</strong> : tendance descendante confirmée</li>
+        <li>Configuration mixte → tendance indécise, signal faible</li>
+        <li>Le prix au-dessus de l'EMA50 indique un contexte globalement haussier</li>
+      </ul>
+    </div>
+
+    <!-- BOLLINGER -->
+    <div class="card">
+      <h3 style="color:var(--purple)">4. Bandes de Bollinger (20 périodes, 2 écarts-types)</h3>
+      <p>Les bandes de Bollinger mesurent la <strong style="color:var(--text)">volatilité</strong> et identifient les niveaux de support/résistance dynamiques.</p>
+      <div class="formula">Bande Médiane = SMA(close, 20)
+Écart-type   = STD(close, 20)
+Bande Haute  = Médiane + (2 × Écart-type)
+Bande Basse  = Médiane − (2 × Écart-type)</div>
+      <ul>
+        <li><span class="badge-buy">Prix ≤ Bande basse</span> → <strong>Rebond potentiel</strong> : le prix est statistiquement bas</li>
+        <li><span class="badge-sell">Prix ≥ Bande haute</span> → <strong>Résistance/retournement</strong> : le prix est statistiquement haut</li>
+        <li>Bandes serrées = faible volatilité (breakout imminent)</li>
+        <li>Bandes larges = forte volatilité en cours</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MOTEUR DE SIGNAL -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(34,197,94,.1)">🧮</div>
+      <div>
+        <div class="section-title">Moteur de Signal — Système de Score Pondéré</div>
+        <div class="section-sub">Chaque indicateur contribue au score final</div>
+      </div>
+    </div>
+    <div class="card">
+      <p>Chaque indicateur génère un score positif (signal haussier) ou négatif (signal baissier). Les scores s'additionnent pour produire un score global :</p>
+      <table class="score-table">
+        <thead><tr><th>Condition</th><th>Score</th><th>Interprétation</th></tr></thead>
+        <tbody>
+          <tr><td>RSI &lt; 25</td><td><span class="badge-buy">+3.0</span></td><td>Survente extrême — signal fort</td></tr>
+          <tr><td>RSI &lt; 30</td><td><span class="badge-buy">+2.0</span></td><td>Survente — signal haussier</td></tr>
+          <tr><td>RSI &gt; 75</td><td><span class="badge-sell">−3.0</span></td><td>Surachat extrême — signal fort</td></tr>
+          <tr><td>RSI &gt; 70</td><td><span class="badge-sell">−2.0</span></td><td>Surachat — signal baissier</td></tr>
+          <tr><td>MACD haussier (fort)</td><td><span class="badge-buy">+2.0</span></td><td>Élan acheteur</td></tr>
+          <tr><td>MACD baissier (fort)</td><td><span class="badge-sell">−2.0</span></td><td>Élan vendeur</td></tr>
+          <tr><td>EMA9 &gt; EMA21 &gt; EMA50</td><td><span class="badge-buy">+1.5</span></td><td>Tendance haussière alignée</td></tr>
+          <tr><td>EMA9 &lt; EMA21 &lt; EMA50</td><td><span class="badge-sell">−1.5</span></td><td>Tendance baissière alignée</td></tr>
+          <tr><td>Prix touche bande Bollinger basse</td><td><span class="badge-buy">+1.5</span></td><td>Support dynamique</td></tr>
+          <tr><td>Prix touche bande Bollinger haute</td><td><span class="badge-sell">−1.5</span></td><td>Résistance dynamique</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Règle de décision finale</h3>
+      <div class="formula">Score ≥ +3.0  →  <span style="color:#22c55e">▲ ACHAT (BUY)</span>
+Score ≤ −3.0  →  <span style="color:#ef4444">▼ VENTE (SELL)</span>
+Sinon         →  <span style="color:#f59e0b">◆ NEUTRE (NEUTRAL)</span>
+
+Confiance = 50% + (|score| × 8%)   [plafonné à 100%]</div>
+      <p>Un score de ±7 (maximum théorique) donne une confiance de 100%. Un score de ±3 donne environ 74% de confiance.</p>
+    </div>
+  </div>
+
+  <!-- PRÉVISIONS MULTI-HORIZONS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(0,170,228,.1)">🔮</div>
+      <div>
+        <div class="section-title">Prévisions Multi-Horizons</div>
+        <div class="section-sub">Le même moteur appliqué sur 3 intervalles de temps différents</div>
+      </div>
+    </div>
+    <div class="card">
+      <p>Pour chaque horizon, l'algorithme télécharge un jeu de données avec un intervalle adapté, calcule les indicateurs, et génère un signal indépendant :</p>
+      <div class="horizon-grid">
+        <div class="horizon-card">
+          <div class="h-label">Horizon 30 min</div>
+          <div class="h-interval">Bougies 5m</div>
+          <div class="h-period">Données des 5 derniers jours</div>
+        </div>
+        <div class="horizon-card">
+          <div class="h-label">Horizon 1 heure</div>
+          <div class="h-interval">Bougies 15m</div>
+          <div class="h-period">Données des 5 derniers jours</div>
+        </div>
+        <div class="horizon-card">
+          <div class="h-label">Horizon 2 heures</div>
+          <div class="h-interval">Bougies 30m</div>
+          <div class="h-period">Données des 60 derniers jours</div>
+        </div>
+      </div>
+      <p style="margin-top:12px;">Les signaux peuvent diverger entre horizons — c'est normal et informatif. Ex : SELL sur 30 min mais BUY sur 2h indique une correction à court terme dans une tendance haussière plus large.</p>
+    </div>
+  </div>
+
+  <!-- ACTIFS SUPPORTÉS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(255,166,87,.1)">💎</div>
+      <div>
+        <div class="section-title">Actifs Supportés</div>
+        <div class="section-sub">5 marchés couverts simultanément</div>
+      </div>
+    </div>
+    <div class="card">
+      <table class="score-table">
+        <thead><tr><th>Actif</th><th>Ticker Yahoo</th><th>Description</th><th>Page</th></tr></thead>
+        <tbody>
+          <tr><td>⚡ <strong>XAU/USD</strong></td><td><span class="badge-info">GC=F</span></td><td>Or spot (Gold Futures)</td><td><a href="/" style="color:var(--accent)">Gold</a></td></tr>
+          <tr><td>₿ <strong>BTC/USD</strong></td><td><span class="badge-info">BTC-USD</span></td><td>Bitcoin</td><td><a href="/btc" style="color:var(--accent)">Bitcoin</a></td></tr>
+          <tr><td>∞ <strong>ICP/USD</strong></td><td><span class="badge-info">ICP-USD</span></td><td>Internet Computer</td><td><a href="/icp" style="color:var(--accent)">ICP</a></td></tr>
+          <tr><td>✕ <strong>XRP/USD</strong></td><td><span class="badge-info">XRP-USD</span></td><td>Ripple XRP</td><td><a href="/xrp" style="color:var(--accent)">XRP</a></td></tr>
+          <tr><td>B <strong>BNB/USD</strong></td><td><span class="badge-info">BNB-USD</span></td><td>BNB Chain</td><td><a href="/bnb" style="color:var(--accent)">BNB</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LIMITES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:rgba(239,68,68,.1)">⚠️</div>
+      <div>
+        <div class="section-title">Limites &amp; Précautions</div>
+        <div class="section-sub">Ce que l'algorithme ne fait pas</div>
+      </div>
+    </div>
+    <div class="card">
+      <ul>
+        <li><strong style="color:var(--text)">Analyse technique uniquement</strong> — Aucune analyse fondamentale (news, bilans, événements macro) n'est prise en compte.</li>
+        <li><strong style="color:var(--text)">Données légèrement différées</strong> — Yahoo Finance peut introduire un délai de 15 min sur certains marchés.</li>
+        <li><strong style="color:var(--text)">Pas de backtesting</strong> — Les signaux ne sont pas testés historiquement. Les performances passées ne garantissent pas les résultats futurs.</li>
+        <li><strong style="color:var(--text)">Marchés fermés</strong> — En dehors des heures de trading (or, futures), les données peuvent être obsolètes.</li>
+        <li><strong style="color:var(--text)">Signal ≠ Certitude</strong> — Un score de 100% de confiance signifie seulement que tous les indicateurs convergent, pas que le marché suivra.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    <strong>⚠ Avertissement important</strong> — TraidMe by KORVATO est un outil d'aide à la décision basé sur l'analyse technique. Il ne constitue <strong>pas un conseil financier</strong>. Les marchés financiers comportent des risques importants de perte en capital. Ne tradez qu'avec des fonds que vous pouvez vous permettre de perdre. KORVATO ne saurait être tenu responsable des décisions prises sur la base de ces informations.
+  </div>
+
+</div>
+
+<footer>
+  Conçu et développé par <span>KORVATO</span> · TraidMe · Analyse Technique Algorithmique
+</footer>
+
+</body>
+</html>
