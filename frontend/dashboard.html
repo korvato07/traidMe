@@ -109,12 +109,12 @@ nav.asset-nav .sep{color:var(--border);padding:0 4px;font-size:16px}
 <script>
 const ASSET_CONFIG = {
   GOLD: {color:'#ffa657', url:'/', label:'XAU/USD — Gold',             symbol:'Gold',   icon:'Au'},
-  BTC:  {color:'#f7931a', url:'/btc', label:'BTC/USD — Bitcoin',       symbol:'BTC',    icon:'₿'},
-  ETH:  {color:'#627eea', url:'/eth', label:'ETH/USD — Ethereum',      symbol:'ETH',    icon:'Ξ'},
-  ICP:  {color:'#8b5cf6', url:'/icp', label:'ICP/USD — Internet Comp.',symbol:'ICP',    icon:'∞'},
-  XRP:  {color:'#00aae4', url:'/xrp', label:'XRP/USD — Ripple',        symbol:'XRP',    icon:'✕'},
-  BNB:  {color:'#f0b90b', url:'/bnb', label:'BNB/USD — BNB Chain',     symbol:'BNB',    icon:'B'},
-  SOL:  {color:'#9945ff', url:'/sol', label:'SOL/USD — Solana',        symbol:'SOL',    icon:'◎'},
+  BTC:  {color:'#f7931a', url:'/btc', label:'BTC/USDT — Bitcoin',       symbol:'BTC',    icon:'₿'},
+  ETH:  {color:'#627eea', url:'/eth', label:'ETH/USDT — Ethereum',      symbol:'ETH',    icon:'Ξ'},
+  ICP:  {color:'#8b5cf6', url:'/icp', label:'ICP/USDT — Internet Comp.',symbol:'ICP',    icon:'∞'},
+  XRP:  {color:'#00aae4', url:'/xrp', label:'XRP/USDT — Ripple',        symbol:'XRP',    icon:'✕'},
+  BNB:  {color:'#f0b90b', url:'/bnb', label:'BNB/USDT — BNB Chain',     symbol:'BNB',    icon:'B'},
+  SOL:  {color:'#9945ff', url:'/sol', label:'SOL/USDT — Solana',        symbol:'SOL',    icon:'◎'},
 };
 
 function fmtPrice(v, asset) {
@@ -154,7 +154,7 @@ function makeCard(d) {
       </div>
       <div class="signal-badge ${sig}">${sig}</div>
     </div>
-    <div class="card-price">${fmtPrice(d.close, d.asset)}<span class="currency">USD</span></div>
+    <div class="card-price">${fmtPrice(d.close, d.asset)}<span class="currency">${d.asset === 'GOLD' ? 'USD' : 'USDT'}</span></div>
     <div class="card-metrics">
       <div class="metric">
         <div class="metric-label">RSI (14)</div>

@@ -134,12 +134,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 const PATH_ASSET = {'/btc':'BTC','/eth':'ETH','/icp':'ICP','/xrp':'XRP','/bnb':'BNB','/sol':'SOL'};
 const ASSET = PATH_ASSET[window.location.pathname] || 'BTC';
 const CFGS = {
-  BTC:{name:'Bitcoin',         symbol:'BTC/USD', icon:'₿', accent:'#f7931a', rgb:'247,147,26',  grid:'#1a1e2e', url:'/btc'},
-  ETH:{name:'Ethereum',        symbol:'ETH/USD', icon:'Ξ', accent:'#627eea', rgb:'98,126,234',  grid:'#13182e', url:'/eth'},
-  ICP:{name:'Internet Comp.',  symbol:'ICP/USD', icon:'∞', accent:'#8b5cf6', rgb:'139,92,246',  grid:'#161626', url:'/icp'},
-  XRP:{name:'Ripple XRP',      symbol:'XRP/USD', icon:'✕', accent:'#00aae4', rgb:'0,170,228',   grid:'#131b26', url:'/xrp'},
-  BNB:{name:'BNB Chain',       symbol:'BNB/USD', icon:'B', accent:'#f0b90b', rgb:'240,185,11',  grid:'#1a1a0e', url:'/bnb'},
-  SOL:{name:'Solana',          symbol:'SOL/USD', icon:'◎', accent:'#9945ff', rgb:'153,69,255',  grid:'#160f26', url:'/sol'},
+  BTC:{name:'Bitcoin',         symbol:'BTC/USDT', icon:'₿', accent:'#f7931a', rgb:'247,147,26',  grid:'#1a1e2e', url:'/btc'},
+  ETH:{name:'Ethereum',        symbol:'ETH/USDT', icon:'Ξ', accent:'#627eea', rgb:'98,126,234',  grid:'#13182e', url:'/eth'},
+  ICP:{name:'Internet Comp.',  symbol:'ICP/USDT', icon:'∞', accent:'#8b5cf6', rgb:'139,92,246',  grid:'#161626', url:'/icp'},
+  XRP:{name:'Ripple XRP',      symbol:'XRP/USDT', icon:'✕', accent:'#00aae4', rgb:'0,170,228',   grid:'#131b26', url:'/xrp'},
+  BNB:{name:'BNB Chain',       symbol:'BNB/USDT', icon:'B', accent:'#f0b90b', rgb:'240,185,11',  grid:'#1a1a0e', url:'/bnb'},
+  SOL:{name:'Solana',          symbol:'SOL/USDT', icon:'◎', accent:'#9945ff', rgb:'153,69,255',  grid:'#160f26', url:'/sol'},
 };
 const CFG = CFGS[ASSET] || CFGS.BTC;
 document.documentElement.style.setProperty('--accent', CFG.accent);
@@ -478,7 +478,7 @@ function updateForecasts(forecasts) {
 function updatePrice(price) {
   const el = document.getElementById('live-price');
   const dec = price < 10 ? 6 : price < 1000 ? 4 : 2;
-  el.textContent = price.toLocaleString('fr-FR', {minimumFractionDigits:dec,maximumFractionDigits:dec}) + ' $';
+  el.textContent = price.toLocaleString('fr-FR', {minimumFractionDigits:dec,maximumFractionDigits:dec}) + ' USDT';
   el.className = 'header-price'+(prevPrice!==null&&price<prevPrice?' down':'');
   prevPrice = price;
 }

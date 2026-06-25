@@ -21,12 +21,12 @@ if sys.platform == "win32":
 
 ASSETS = {
     "GOLD": {"ticker": "GC=F",    "label": "XAU/USD — Gold",             "currency": "USD/oz", "icon": "⚡"},
-    "BTC":  {"ticker": "BTC-USD", "label": "BTC/USD — Bitcoin",           "currency": "USD",    "icon": "₿"},
-    "ETH":  {"ticker": "ETH-USD", "label": "ETH/USD — Ethereum",          "currency": "USD",    "icon": "Ξ"},
-    "ICP":  {"ticker": "ICP-USD", "label": "ICP/USD — Internet Computer", "currency": "USD",    "icon": "∞"},
-    "XRP":  {"ticker": "XRP-USD", "label": "XRP/USD — Ripple",            "currency": "USD",    "icon": "✕"},
-    "BNB":  {"ticker": "BNB-USD", "label": "BNB/USD — BNB Chain",         "currency": "USD",    "icon": "B"},
-    "SOL":  {"ticker": "SOL-USD", "label": "SOL/USD — Solana",            "currency": "USD",    "icon": "◎"},
+    "BTC":  {"ticker": "BTC-USD", "label": "BTC/USDT — Bitcoin",           "currency": "USDT",   "icon": "₿"},
+    "ETH":  {"ticker": "ETH-USD", "label": "ETH/USDT — Ethereum",          "currency": "USDT",   "icon": "Ξ"},
+    "ICP":  {"ticker": "ICP-USD", "label": "ICP/USDT — Internet Computer", "currency": "USDT",   "icon": "∞"},
+    "XRP":  {"ticker": "XRP-USD", "label": "XRP/USDT — Ripple",            "currency": "USDT",   "icon": "✕"},
+    "BNB":  {"ticker": "BNB-USD", "label": "BNB/USDT — BNB Chain",         "currency": "USDT",   "icon": "B"},
+    "SOL":  {"ticker": "SOL-USD", "label": "SOL/USDT — Solana",            "currency": "USDT",   "icon": "◎"},
 }
 
 _session = requests.Session()
