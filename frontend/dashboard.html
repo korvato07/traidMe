@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d0d1a">
+<link rel="manifest" href="/manifest.json">
+<title>TraidMe — Dashboard Global | KORVATO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0d1a;--surface:#13131f;--border:#1e1e35;--text:#e2e8f0;--muted:#7a8299;--buy:#22c55e;--sell:#ef4444;--neutral:#94a3b8;--gold:#ffa657}
+html{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+nav.asset-nav{display:flex;align-items:center;gap:4px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
+nav.asset-nav a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--muted);text-decoration:none;transition:all .2s}
+nav.asset-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+nav.asset-nav a.active{color:#fff;background:rgba(255,166,87,.15);border:1px solid rgba(255,166,87,.3)}
+nav.asset-nav .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+nav.asset-nav .sep{color:var(--border);padding:0 4px;font-size:16px}
+.header{padding:28px 24px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;font-weight:700;color:#fff}
+.header h1 span{color:var(--gold);font-size:13px;font-weight:500;margin-left:8px}
+.meta{font-size:12px;color:var(--muted)}
+.refresh-btn{padding:7px 16px;background:rgba(255,166,87,.15);border:1px solid rgba(255,166,87,.3);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.refresh-btn:hover{background:rgba(255,166,87,.25)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:0 24px 24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .2s,border-color .2s;cursor:pointer;text-decoration:none;display:block}
+.card:hover{transform:translateY(-2px);border-color:#2e2e50}
+.card.buy{border-color:rgba(34,197,94,.3)}
+.card.sell{border-color:rgba(239,68,68,.3)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.asset-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.signal-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.8px}
+.signal-badge.BUY{background:rgba(34,197,94,.15);color:var(--buy);border:1px solid rgba(34,197,94,.3)}
+.signal-badge.SELL{background:rgba(239,68,68,.15);color:var(--sell);border:1px solid rgba(239,68,68,.3)}
+.signal-badge.NEUTRAL{background:rgba(148,163,184,.1);color:var(--neutral);border:1px solid rgba(148,163,184,.2)}
+.signal-badge.ERROR{background:rgba(239,68,68,.1);color:var(--sell);border:1px solid rgba(239,68,68,.2)}
+.card-name{font-size:13px;font-weight:700;color:#fff}
+.card-symbol{font-size:11px;color:var(--muted)}
+.card-price{font-size:26px;font-weight:700;color:#fff;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.card-price .currency{font-size:14px;color:var(--muted);font-weight:400;margin-left:4px}
+.card-metrics{display:flex;gap:20px;margin-top:12px}
+.metric{flex:1}
+.metric-label{font-size:10px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.metric-value{font-size:14px;font-weight:600;color:#fff}
+.metric-value.rsi-high{color:var(--sell)}
+.metric-value.rsi-low{color:var(--buy)}
+.score-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:14px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;transition:width .5s}
+.score-fill.buy{background:var(--buy)}
+.score-fill.sell{background:var(--sell)}
+.score-fill.neutral{background:var(--neutral)}
+.risk-row{display:flex;gap:8px;margin-top:10px}
+.risk-item{flex:1;background:rgba(255,255,255,.04);border-radius:6px;padding:6px 8px}
+.risk-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.risk-val{font-size:12px;font-weight:600}
+.risk-val.sl{color:var(--sell)}
+.risk-val.tp{color:var(--buy)}
+.loading{padding:60px 24px;text-align:center;color:var(--muted)}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 24px 20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.stat-val{font-size:20px;font-weight:700;color:#fff}
+.stat-val.buy{color:var(--buy)}
+.stat-val.sell{color:var(--sell)}
+.stat-val.neutral{color:var(--neutral)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.ts{font-size:11px;color:var(--muted);padding:0 24px 24px}
+@media(max-width:500px){.stats-bar{grid-template-columns:repeat(2,1fr)}.card-price{font-size:20px}}
+</style>
+</head>
+<body>
+
+<nav class="asset-nav">
+  <a href="/"><span class="dot" style="background:#ffa657"></span>Gold</a>
+  <a href="/btc"><span class="dot" style="background:#f7931a"></span>BTC</a>
+  <a href="/eth"><span class="dot" style="background:#627eea"></span>ETH</a>
+  <a href="/icp"><span class="dot" style="background:#8b5cf6"></span>ICP</a>
+  <a href="/xrp"><span class="dot" style="background:#00aae4"></span>XRP</a>
+  <a href="/bnb"><span class="dot" style="background:#f0b90b"></span>BNB</a>
+  <a href="/sol"><span class="dot" style="background:#9945ff"></span>SOL</a>
+  <span class="sep">|</span>
+  <a href="/dashboard" class="active">⊞ Dashboard</a>
+  <a href="/history">📋 Historique</a>
+  <a href="/algo">ⓘ Algo</a>
+</nav>
+
+<div class="header">
+  <div>
+    <h1>Dashboard Global <span>by KORVATO</span></h1>
+    <div class="meta" id="ts">Chargement...</div>
+  </div>
+  <button class="refresh-btn" onclick="loadDashboard()">↺ Actualiser</button>
+</div>
+
+<div class="stats-bar" id="stats">
+  <div class="stat"><div class="stat-val" id="cnt-buy">—</div><div class="stat-label">Signaux ACHAT</div></div>
+  <div class="stat"><div class="stat-val sell" id="cnt-sell">—</div><div class="stat-label">Signaux VENTE</div></div>
+  <div class="stat"><div class="stat-val neutral" id="cnt-neutral">—</div><div class="stat-label">Neutres</div></div>
+  <div class="stat"><div class="stat-val" id="cnt-total">—</div><div class="stat-label">Actifs suivis</div></div>
+</div>
+
+<div id="grid" class="grid">
+  <div class="loading"><div class="spinner"></div>Chargement des marchés…<br><small style="margin-top:8px;display:block">Peut prendre 10–20 secondes</small></div>
+</div>
+
+<div class="ts" id="ts2"></div>
+
+<script>
+const ASSET_CONFIG = {
+  GOLD: {color:'#ffa657', url:'/', label:'XAU/USD — Gold',             symbol:'Gold',   icon:'Au'},
+  BTC:  {color:'#f7931a', url:'/btc', label:'BTC/USD — Bitcoin',       symbol:'BTC',    icon:'₿'},
+  ETH:  {color:'#627eea', url:'/eth', label:'ETH/USD — Ethereum',      symbol:'ETH',    icon:'Ξ'},
+  ICP:  {color:'#8b5cf6', url:'/icp', label:'ICP/USD — Internet Comp.',symbol:'ICP',    icon:'∞'},
+  XRP:  {color:'#00aae4', url:'/xrp', label:'XRP/USD — Ripple',        symbol:'XRP',    icon:'✕'},
+  BNB:  {color:'#f0b90b', url:'/bnb', label:'BNB/USD — BNB Chain',     symbol:'BNB',    icon:'B'},
+  SOL:  {color:'#9945ff', url:'/sol', label:'SOL/USD — Solana',        symbol:'SOL',    icon:'◎'},
+};
+
+function fmtPrice(v, asset) {
+  if (v == null) return '—';
+  if (asset === 'XRP' || asset === 'ICP') return v.toLocaleString('fr-FR', {minimumFractionDigits:4, maximumFractionDigits:4});
+  return v.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function rsiClass(rsi) {
+  if (!rsi) return '';
+  if (rsi > 70) return 'rsi-high';
+  if (rsi < 30) return 'rsi-low';
+  return '';
+}
+
+function makeCard(d) {
+  const cfg   = ASSET_CONFIG[d.asset] || {};
+  const sig   = d.signal || 'ERROR';
+  const score = d.score  || 0;
+  const absSc = Math.abs(score);
+  const maxSc = 8;
+  const pct   = Math.min(100, (absSc / maxSc) * 100);
+  const fillClass = sig === 'BUY' ? 'buy' : sig === 'SELL' ? 'sell' : 'neutral';
+
+  const slTxt = d.stop_loss  != null ? fmtPrice(d.stop_loss,  d.asset) : '—';
+  const tpTxt = d.take_profit!= null ? fmtPrice(d.take_profit,d.asset) : '—';
+
+  return `
+  <a class="card ${sig === 'BUY' ? 'buy' : sig === 'SELL' ? 'sell' : ''}" href="${cfg.url || '/'}">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="asset-icon" style="background:${cfg.color}22;color:${cfg.color}">${cfg.icon || d.asset[0]}</div>
+        <div>
+          <div class="card-name">${cfg.symbol || d.asset}</div>
+          <div class="card-symbol">${cfg.label || d.label}</div>
+        </div>
+      </div>
+      <div class="signal-badge ${sig}">${sig}</div>
+    </div>
+    <div class="card-price">${fmtPrice(d.close, d.asset)}<span class="currency">USD</span></div>
+    <div class="card-metrics">
+      <div class="metric">
+        <div class="metric-label">RSI (14)</div>
+        <div class="metric-value ${rsiClass(d.rsi)}">${d.rsi != null ? d.rsi.toFixed(1) : '—'}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Score</div>
+        <div class="metric-value">${score >= 0 ? '+' : ''}${score.toFixed(2)}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Confiance</div>
+        <div class="metric-value">${d.confidence != null ? d.confidence + '%' : '—'}</div>
+      </div>
+    </div>
+    <div class="score-bar"><div class="score-fill ${fillClass}" style="width:${pct}%"></div></div>
+    ${sig !== 'NEUTRAL' && sig !== 'ERROR' ? `
+    <div class="risk-row">
+      <div class="risk-item"><div class="risk-label">Stop Loss</div><div class="risk-val sl">${slTxt}</div></div>
+      <div class="risk-item"><div class="risk-label">Take Profit</div><div class="risk-val tp">${tpTxt}</div></div>
+    </div>` : ''}
+  </a>`;
+}
+
+async function loadDashboard() {
+  document.getElementById('grid').innerHTML = '<div class="loading"><div class="spinner"></div>Chargement des marchés…<br><small style="margin-top:8px;display:block">Peut prendre 10–20 secondes</small></div>';
+  try {
+    const r    = await fetch('/api/dashboard');
+    const data = await r.json();
+    const assets = data.assets || [];
+
+    const buy     = assets.filter(a => a.signal === 'BUY').length;
+    const sell    = assets.filter(a => a.signal === 'SELL').length;
+    const neutral = assets.filter(a => a.signal === 'NEUTRAL').length;
+    document.getElementById('cnt-buy').textContent     = buy;
+    document.getElementById('cnt-sell').textContent    = sell;
+    document.getElementById('cnt-neutral').textContent = neutral;
+    document.getElementById('cnt-total').textContent   = assets.length;
+    document.getElementById('cnt-buy').className       = 'stat-val buy';
+
+    document.getElementById('grid').innerHTML = assets.map(makeCard).join('');
+
+    const ts = new Date(data.timestamp).toLocaleTimeString('fr-FR');
+    document.getElementById('ts').textContent  = `Dernière mise à jour : ${ts}`;
+    document.getElementById('ts2').textContent = `TraidMe by KORVATO — ${ts}`;
+  } catch (e) {
+    document.getElementById('grid').innerHTML = `<div class="loading" style="color:#ef4444">Erreur : ${e.message}</div>`;
+  }
+}
+
+loadDashboard();
+// Refresh automatique toutes les 90s
+setInterval(loadDashboard, 90000);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+</body>
+</html>

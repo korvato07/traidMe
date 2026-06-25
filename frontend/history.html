@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d0d1a">
+<link rel="manifest" href="/manifest.json">
+<title>TraidMe — Historique des Signaux | KORVATO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0d1a;--surface:#13131f;--border:#1e1e35;--text:#e2e8f0;--muted:#7a8299;--buy:#22c55e;--sell:#ef4444;--neutral:#94a3b8;--gold:#ffa657}
+html{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+nav.asset-nav{display:flex;align-items:center;gap:4px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap}
+nav.asset-nav a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--muted);text-decoration:none;transition:all .2s}
+nav.asset-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+nav.asset-nav a.active{color:#fff;background:rgba(255,166,87,.15);border:1px solid rgba(255,166,87,.3)}
+nav.asset-nav .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+nav.asset-nav .sep{color:var(--border);padding:0 4px;font-size:16px}
+.header{padding:28px 24px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.header h1{font-size:22px;font-weight:700;color:#fff}
+.header h1 span{color:var(--gold);font-size:13px;font-weight:500;margin-left:8px}
+.meta{font-size:12px;color:var(--muted);margin-top:4px}
+.controls{display:flex;gap:8px;padding:0 24px 20px;flex-wrap:wrap}
+.asset-btn{padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.asset-btn:hover{border-color:var(--gold);color:var(--text)}
+.asset-btn.active{border-color:var(--gold);background:rgba(255,166,87,.1);color:var(--gold)}
+.table-wrap{padding:0 24px 24px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{border-bottom:2px solid var(--border)}
+th{padding:10px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+td{padding:10px 12px;font-variant-numeric:tabular-nums}
+.asset-cell{display:flex;align-items:center;gap:8px}
+.dot-sm{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.6px}
+.badge.BUY{background:rgba(34,197,94,.12);color:var(--buy);border:1px solid rgba(34,197,94,.25)}
+.badge.SELL{background:rgba(239,68,68,.12);color:var(--sell);border:1px solid rgba(239,68,68,.25)}
+.badge.NEUTRAL{background:rgba(148,163,184,.08);color:var(--neutral);border:1px solid rgba(148,163,184,.15)}
+.score-pos{color:var(--buy)}
+.score-neg{color:var(--sell)}
+.empty{padding:60px 24px;text-align:center;color:var(--muted)}
+.spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rsi-high{color:var(--sell)}
+.rsi-low{color:var(--buy)}
+.summary{display:flex;gap:12px;padding:0 24px 20px;flex-wrap:wrap}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;flex:1;min-width:100px}
+.sum-val{font-size:22px;font-weight:700;color:#fff}
+.sum-val.buy{color:var(--buy)}
+.sum-val.sell{color:var(--sell)}
+.sum-label{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+
+<nav class="asset-nav">
+  <a href="/"><span class="dot" style="background:#ffa657"></span>Gold</a>
+  <a href="/btc"><span class="dot" style="background:#f7931a"></span>BTC</a>
+  <a href="/eth"><span class="dot" style="background:#627eea"></span>ETH</a>
+  <a href="/icp"><span class="dot" style="background:#8b5cf6"></span>ICP</a>
+  <a href="/xrp"><span class="dot" style="background:#00aae4"></span>XRP</a>
+  <a href="/bnb"><span class="dot" style="background:#f0b90b"></span>BNB</a>
+  <a href="/sol"><span class="dot" style="background:#9945ff"></span>SOL</a>
+  <span class="sep">|</span>
+  <a href="/dashboard">⊞ Dashboard</a>
+  <a href="/history" class="active">📋 Historique</a>
+  <a href="/algo">ⓘ Algo</a>
+</nav>
+
+<div class="header">
+  <div>
+    <h1>Historique des Signaux <span>by KORVATO</span></h1>
+    <div class="meta">Signaux enregistrés depuis le démarrage du serveur (max 200 par actif)</div>
+  </div>
+</div>
+
+<div class="controls" id="asset-controls">
+  <button class="asset-btn active" data-asset="ALL" onclick="selectAsset('ALL',this)">Tous</button>
+  <button class="asset-btn" data-asset="GOLD" onclick="selectAsset('GOLD',this)">Gold</button>
+  <button class="asset-btn" data-asset="BTC"  onclick="selectAsset('BTC',this)">BTC</button>
+  <button class="asset-btn" data-asset="ETH"  onclick="selectAsset('ETH',this)">ETH</button>
+  <button class="asset-btn" data-asset="ICP"  onclick="selectAsset('ICP',this)">ICP</button>
+  <button class="asset-btn" data-asset="XRP"  onclick="selectAsset('XRP',this)">XRP</button>
+  <button class="asset-btn" data-asset="BNB"  onclick="selectAsset('BNB',this)">BNB</button>
+  <button class="asset-btn" data-asset="SOL"  onclick="selectAsset('SOL',this)">SOL</button>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="table-wrap">
+  <div id="container"><div class="empty"><div class="spinner"></div>Chargement…</div></div>
+</div>
+
+<script>
+const COLORS = {GOLD:'#ffa657',BTC:'#f7931a',ETH:'#627eea',ICP:'#8b5cf6',XRP:'#00aae4',BNB:'#f0b90b',SOL:'#9945ff'};
+let allData = {};
+let currentAsset = 'ALL';
+
+function fmtTs(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+}
+
+function fmtPrice(v) {
+  if (v == null) return '—';
+  if (v < 10) return v.toLocaleString('fr-FR', {minimumFractionDigits:4,maximumFractionDigits:4});
+  return v.toLocaleString('fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function getRows() {
+  if (currentAsset === 'ALL') {
+    return Object.entries(allData).flatMap(([asset, rows]) =>
+      rows.map(r => ({...r, asset}))
+    ).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+  return (allData[currentAsset] || []).map(r => ({...r, asset: currentAsset}))
+    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+function renderSummary(rows) {
+  const buy     = rows.filter(r => r.signal === 'BUY').length;
+  const sell    = rows.filter(r => r.signal === 'SELL').length;
+  const neutral = rows.filter(r => r.signal === 'NEUTRAL').length;
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-card"><div class="sum-val buy">${buy}</div><div class="sum-label">ACHAT</div></div>
+    <div class="sum-card"><div class="sum-val sell">${sell}</div><div class="sum-label">VENTE</div></div>
+    <div class="sum-card"><div class="sum-val">${neutral}</div><div class="sum-label">NEUTRE</div></div>
+    <div class="sum-card"><div class="sum-val">${rows.length}</div><div class="sum-label">Total signaux</div></div>
+  `;
+}
+
+function renderTable(rows) {
+  if (!rows.length) {
+    document.getElementById('container').innerHTML = '<div class="empty">Aucun signal enregistré.<br><small>Naviguez vers un actif pour générer des signaux.</small></div>';
+    return;
+  }
+  const tbody = rows.map(r => {
+    const sc = r.score || 0;
+    const rsiClass = r.rsi > 70 ? 'rsi-high' : r.rsi < 30 ? 'rsi-low' : '';
+    return `<tr>
+      <td>${fmtTs(r.timestamp)}</td>
+      <td><div class="asset-cell"><span class="dot-sm" style="background:${COLORS[r.asset]||'#888'}"></span>${r.asset}</div></td>
+      <td><span class="badge ${r.signal}">${r.signal}</span></td>
+      <td class="${sc >= 0 ? 'score-pos' : 'score-neg'}">${sc >= 0 ? '+' : ''}${sc.toFixed(2)}</td>
+      <td>${r.confidence != null ? r.confidence + '%' : '—'}</td>
+      <td class="${rsiClass}">${r.rsi != null ? r.rsi.toFixed(1) : '—'}</td>
+      <td>${fmtPrice(r.close)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('container').innerHTML = `
+    <table>
+      <thead><tr><th>Heure</th><th>Actif</th><th>Signal</th><th>Score</th><th>Confiance</th><th>RSI</th><th>Prix</th></tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+}
+
+function render() {
+  const rows = getRows();
+  renderSummary(rows);
+  renderTable(rows);
+}
+
+function selectAsset(asset, btn) {
+  currentAsset = asset;
+  document.querySelectorAll('.asset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/history?asset=ALL');
+    allData = await r.json();
+    render();
+  } catch(e) {
+    document.getElementById('container').innerHTML = `<div class="empty" style="color:#ef4444">Erreur : ${e.message}</div>`;
+  }
+}
+
+loadHistory();
+setInterval(loadHistory, 30000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+</body>
+</html>

@@ -1,13 +1,18 @@
+from __future__ import annotations
 from pathlib import Path
 from datetime import datetime, timezone
+import asyncio
+import concurrent.futures
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .data_fetcher import fetch_ohlcv, df_to_records, get_current_price, ASSETS
-from .indicators import compute_indicators, extract_last_values, indicators_to_series
+from .indicators   import compute_indicators, extract_last_values, indicators_to_series
 from .signal_engine import generate_signal
+from .history_store import signal_history
+from .backtester    import run_backtest
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
@@ -21,31 +26,53 @@ app.add_middleware(
 )
 
 
-# ── Frontend routes ────────────────────────────────────────────────────────
+# ── Pages HTML ─────────────────────────────────────────────────────────────
 
-@app.get("/", include_in_schema=False)
+@app.get("/",           include_in_schema=False)
 async def serve_gold():
     return FileResponse(FRONTEND_DIR / "index.html")
 
-@app.get("/btc", include_in_schema=False)
-@app.get("/icp", include_in_schema=False)
-@app.get("/xrp", include_in_schema=False)
-@app.get("/bnb", include_in_schema=False)
+@app.get("/btc",        include_in_schema=False)
+@app.get("/eth",        include_in_schema=False)
+@app.get("/icp",        include_in_schema=False)
+@app.get("/xrp",        include_in_schema=False)
+@app.get("/bnb",        include_in_schema=False)
+@app.get("/sol",        include_in_schema=False)
 async def serve_crypto():
     return FileResponse(FRONTEND_DIR / "crypto.html")
 
-@app.get("/algo", include_in_schema=False)
+@app.get("/dashboard",  include_in_schema=False)
+async def serve_dashboard():
+    return FileResponse(FRONTEND_DIR / "dashboard.html")
+
+@app.get("/history",    include_in_schema=False)
+async def serve_history_page():
+    return FileResponse(FRONTEND_DIR / "history.html")
+
+@app.get("/algo",       include_in_schema=False)
 async def serve_algo():
     return FileResponse(FRONTEND_DIR / "algo.html")
 
+# Fichiers PWA servis a la racine
+@app.get("/manifest.json", include_in_schema=False)
+async def serve_manifest():
+    return FileResponse(FRONTEND_DIR / "manifest.json", media_type="application/manifest+json")
 
-# ── API helpers ────────────────────────────────────────────────────────────
+@app.get("/sw.js",         include_in_schema=False)
+async def serve_sw():
+    return FileResponse(FRONTEND_DIR / "sw.js", media_type="application/javascript")
+
+
+# ── Core helpers ────────────────────────────────────────────────────────────
 
 def _build_analysis(asset: str, interval: str, period: str) -> dict:
     df_raw = fetch_ohlcv(interval=interval, period=period, asset=asset)
     df     = compute_indicators(df_raw)
     vals   = extract_last_values(df)
     result = generate_signal(vals)
+
+    signal_history.record(asset, result.signal, result.score, result.confidence, vals)
+
     return {
         "timestamp":   datetime.now(timezone.utc).isoformat(),
         "asset":       asset,
@@ -60,6 +87,8 @@ def _build_analysis(asset: str, interval: str, period: str) -> dict:
         "confidence":  result.confidence,
         "reasons":     result.reasons,
         "explanation": result.explanation,
+        "stop_loss":   result.stop_loss,
+        "take_profit": result.take_profit,
     }
 
 
@@ -85,6 +114,8 @@ def _build_forecast(asset: str) -> dict:
                 "reasons":     result.reasons,
                 "explanation": result.explanation,
                 "values":      vals,
+                "stop_loss":   result.stop_loss,
+                "take_profit": result.take_profit,
             })
         except Exception as exc:
             results.append({
@@ -96,6 +127,8 @@ def _build_forecast(asset: str) -> dict:
                 "reasons":     [str(exc)],
                 "explanation": f"Erreur : {exc}",
                 "values":      {},
+                "stop_loss":   None,
+                "take_profit": None,
             })
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -105,7 +138,30 @@ def _build_forecast(asset: str) -> dict:
     }
 
 
-# ── API endpoints ──────────────────────────────────────────────────────────
+def _build_summary(asset: str) -> dict:
+    """Resume leger pour le dashboard (pas de candles)."""
+    df_raw = fetch_ohlcv(interval="15m", period="5d", asset=asset)
+    df     = compute_indicators(df_raw)
+    vals   = extract_last_values(df)
+    result = generate_signal(vals)
+    signal_history.record(asset, result.signal, result.score, result.confidence, vals)
+    return {
+        "asset":      asset,
+        "label":      ASSETS[asset]["label"],
+        "icon":       ASSETS[asset].get("icon", ""),
+        "currency":   ASSETS[asset]["currency"],
+        "close":      vals["close"],
+        "rsi":        vals["rsi"],
+        "signal":     result.signal,
+        "score":      result.score,
+        "confidence": result.confidence,
+        "atr":        vals.get("atr"),
+        "stop_loss":  result.stop_loss,
+        "take_profit":result.take_profit,
+    }
+
+
+# ── REST Endpoints ──────────────────────────────────────────────────────────
 
 @app.get("/api/analysis")
 async def get_analysis(
@@ -149,3 +205,79 @@ async def get_price(asset: str = Query("GOLD")):
 @app.get("/api/assets")
 async def get_assets():
     return JSONResponse({"assets": list(ASSETS.keys()), "details": ASSETS})
+
+
+@app.get("/api/dashboard")
+async def get_dashboard():
+    """Fetche les 7 actifs et retourne un resume global."""
+    loop = asyncio.get_event_loop()
+    assets = list(ASSETS.keys())
+
+    def fetch_one(a):
+        try:
+            return _build_summary(a)
+        except Exception as e:
+            return {"asset": a, "error": str(e), "signal": "ERROR", "close": None}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        summaries = list(await loop.run_in_executor(
+            None,
+            lambda: [pool.submit(fetch_one, a).result() for a in assets]
+        ))
+
+    return JSONResponse({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "assets":    summaries,
+    })
+
+
+@app.get("/api/history")
+async def get_history(asset: str = Query("ALL")):
+    if asset == "ALL":
+        return JSONResponse(signal_history.all_assets())
+    if asset not in ASSETS:
+        raise HTTPException(400, f"Asset inconnu : {asset}")
+    return JSONResponse({asset: signal_history.get(asset)})
+
+
+@app.get("/api/backtest")
+async def get_backtest(
+    asset:     str = Query("BTC"),
+    interval:  str = Query("1h"),
+    period:    str = Query("60d"),
+    n_forward: int = Query(3),
+):
+    if asset not in ASSETS:
+        raise HTTPException(400, f"Asset inconnu : {asset}")
+    try:
+        df_raw  = fetch_ohlcv(interval=interval, period=period, asset=asset)
+        results = run_backtest(df_raw, n_forward=n_forward)
+        results["asset"]    = asset
+        results["interval"] = interval
+        results["period"]   = period
+        return JSONResponse(results)
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
+
+
+# ── WebSocket ────────────────────────────────────────────────────────────────
+
+@app.websocket("/ws/{asset}")
+async def websocket_endpoint(websocket: WebSocket, asset: str):
+    if asset not in ASSETS:
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    loop = asyncio.get_event_loop()
+    try:
+        while True:
+            try:
+                data = await loop.run_in_executor(
+                    None, lambda: _build_analysis(asset, "5m", "5d")
+                )
+                await websocket.send_json(data)
+            except Exception as e:
+                await websocket.send_json({"error": str(e)})
+            await asyncio.sleep(30)
+    except WebSocketDisconnect:
+        pass
