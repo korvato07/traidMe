@@ -14,7 +14,7 @@ from .indicators   import compute_indicators, extract_last_values, indicators_to
 from .signal_engine import generate_signal
 from .history_store import signal_history
 from .backtester    import run_backtest
-from .telegram_notifier import send_alert
+from .telegram_notifier import send_alert, send_startup
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 ALERT_INTERVAL = 15 * 60  # 15 minutes
@@ -40,6 +40,7 @@ async def _alert_scanner():
 
 @asynccontextmanager
 async def lifespan(app):
+    send_startup()
     task = asyncio.create_task(_alert_scanner())
     yield
     task.cancel()
@@ -282,6 +283,31 @@ async def get_history(asset: str = Query("ALL")):
     if asset not in ASSETS:
         raise HTTPException(400, f"Asset inconnu : {asset}")
     return JSONResponse({asset: signal_history.get(asset)})
+
+
+@app.get("/api/test_alert")
+async def test_alert(asset: str = Query("BTC")):
+    """Envoie une alerte test sur Telegram pour verifier la configuration."""
+    if asset not in ASSETS:
+        raise HTTPException(400, f"Asset inconnu : {asset}")
+    try:
+        df  = fetch_ohlcv("15m", "5d", asset)
+        df2 = compute_indicators(df)
+        vals = extract_last_values(df2)
+        result = generate_signal(vals)
+        from .telegram_notifier import _post, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+        if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+            return JSONResponse({"ok": False, "error": "TELEGRAM_TOKEN ou TELEGRAM_CHAT_ID manquant"})
+        ts = __import__("time").strftime("%d %b %Y — %H:%M UTC", __import__("time").gmtime())
+        ok = _post(
+            f"🧪 *Test alerte — {ASSETS[asset]['label']}*\n\n"
+            f"Signal : `{result.signal}` | Score : `{result.score:.2f}`\n"
+            f"Prix : `{vals.get('close')} {ASSETS[asset]['currency']}`\n\n"
+            f"⏰ _{ts}_\n📡 TraidMe by KORVATO"
+        )
+        return JSONResponse({"ok": ok, "signal": result.signal, "asset": asset})
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 @app.get("/api/backtest")
