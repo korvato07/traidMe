@@ -7,6 +7,7 @@ import concurrent.futures
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 from .data_fetcher import fetch_ohlcv, df_to_records, get_current_price, ASSETS
 from .indicators   import compute_indicators, extract_last_values, indicators_to_series
@@ -16,8 +17,35 @@ from .backtester    import run_backtest
 from .telegram_notifier import send_alert
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+ALERT_INTERVAL = 15 * 60  # 15 minutes
 
-app = FastAPI(title="TraidMe by KORVATO — Multi-Asset Trading Assistant")
+
+async def _alert_scanner():
+    """Tache de fond : scan tous les assets toutes les 15 min et envoie les alertes."""
+    await asyncio.sleep(30)  # attendre que le serveur soit pret
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+                futs = {ex.submit(_build_summary, a): a for a in ASSETS}
+                for fut in concurrent.futures.as_completed(futs):
+                    try:
+                        fut.result()
+                    except Exception as e:
+                        print(f"[Scanner] {futs[fut]}: {e}")
+        except Exception as e:
+            print(f"[Scanner] Erreur globale: {e}")
+        await asyncio.sleep(ALERT_INTERVAL)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    task = asyncio.create_task(_alert_scanner())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="TraidMe by KORVATO — Multi-Asset Trading Assistant", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
