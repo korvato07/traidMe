@@ -13,6 +13,7 @@ from .indicators   import compute_indicators, extract_last_values, indicators_to
 from .signal_engine import generate_signal
 from .history_store import signal_history
 from .backtester    import run_backtest
+from .telegram_notifier import send_alert
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
@@ -72,6 +73,13 @@ def _build_analysis(asset: str, interval: str, period: str) -> dict:
     result = generate_signal(vals)
 
     signal_history.record(asset, result.signal, result.score, result.confidence, vals)
+
+    send_alert(
+        asset=asset, signal=result.signal, label=ASSETS[asset]["label"],
+        price=vals.get("close"), rsi=vals.get("rsi"),
+        score=result.score, confidence=result.confidence,
+        stop_loss=result.stop_loss, take_profit=result.take_profit,
+    )
 
     return {
         "timestamp":   datetime.now(timezone.utc).isoformat(),
@@ -145,6 +153,14 @@ def _build_summary(asset: str) -> dict:
     vals   = extract_last_values(df)
     result = generate_signal(vals)
     signal_history.record(asset, result.signal, result.score, result.confidence, vals)
+
+    send_alert(
+        asset=asset, signal=result.signal, label=ASSETS[asset]["label"],
+        price=vals.get("close"), rsi=vals.get("rsi"),
+        score=result.score, confidence=result.confidence,
+        stop_loss=result.stop_loss, take_profit=result.take_profit,
+    )
+
     return {
         "asset":      asset,
         "label":      ASSETS[asset]["label"],
